@@ -1,10 +1,6 @@
 import QtQuick 2.0
 import QtQuick.Window 2.0
 
-//FIXME: need a better way for app bundle
-import QtWebKit 3.0
-import QtWebKit.experimental 1.0
-
 import HttpServer 1.0
 import QtQuick.LocalStorage 2.0
 import DocumentHandler 1.0
@@ -14,14 +10,14 @@ Window {
     width: Screen.width
     height: Screen.height
     visible: true
-    title: "Terrarium - Live QML Editor and Viewer"
+    title: "Terrarium - UI Prototyping Tool for Coders"
 
     property variant httpServer: {}
     property variant httpd: {}
-    property string splitState: 'splitted'
+    property string splitState: (root.width * scaleRatio > 600) ? 'splitted' : 'editor'
     property variant os_type: { '0': 'macx', '1': 'ios', '2': 'android', '3': 'linux', '4': 'default' }
     property variant platformSetting: {
-        'ios': { 'lineNumberSpacing': 3, 'lineNumberPadding' : 17, 'defaultFont': 'Courier New' },
+        'ios': { 'lineNumberSpacing': -1, 'lineNumberPadding' : 20, 'defaultFont': 'Courier New' },
         'macx': { 'lineNumberSpacing': -1, 'lineNumberPadding' : 20, 'defaultFont': 'Courier New' },
         'android': { 'lineNumberSpacing': 0, 'lineNumberPadding' : 20, 'defaultFont': 'Droid Sans Mono' },
         'linux': { 'lineNumberSpacing': 0, 'lineNumberPadding' : 20, 'defaultFont': 'Droid Sans Mono' },
@@ -34,6 +30,10 @@ Window {
     FontLoader { id: fontAwesome; source: "fontawesome-webfont.ttf" }
 
     Component.onCompleted: {
+
+        // FIXME: workaround for Ubuntu Phone
+        if ((scaleRatio < 1) && (os_type[platform]==='linux')) scaleRatio = 2;
+
         httpServer = Qt.createComponent("HttpServer.qml");
         if (httpServer.status == Component.Ready) {
             httpd = httpServer.createObject(root, {'id': 'httpd'});
@@ -74,20 +74,24 @@ Window {
         id: timer
         interval: 500; running: false; repeat: false
         onTriggered: reloadView()
-
-
     }
 
     function reloadView() {
-        viewLoader.setSource('http://localhost:5000/?'+Math.random()) // workaround for cache
+        viewLoader.setSource('http://'+platformIP+':5000/?'+Math.random()) // workaround for cache
+    }
+
+    NaviBar {
+        state: "view"
+        id: navibar 
+        z: 2
     }
 
     Item {
         id: view
-        state: "splitted"
+        state: root.splitState
         width: root.width/2
         height: root.height
-        anchors { top: parent.top; right: parent.right; bottom: parent.bottom }
+        anchors { top: parent.top; right: parent.right; bottom: navibar.top; }
         visible: opacity > 0 ? true : false
 
         Rectangle {
@@ -118,7 +122,7 @@ Window {
             property variant errorLineNumber: 0
             onStatusChanged: {
                 if (viewLoader.status == Loader.Error) {
-                    errorMessage.text = viewLoader.errorString().replace(/http:\/\/localhost:5000\/\?.*?:/g, "Line: ");
+                    errorMessage.text = viewLoader.errorString().replace(/http:\/\/.*:5000\/\?.*?:/g, "Line: ");
 
                     // restart http server when connection refused
                     var connectionRefused = /Connection refused/;
@@ -134,7 +138,7 @@ Window {
                 } else {
                     errorMessage.text = "";
                     if (errorLineNumber > 0)
-                    lineNumberRepeater.itemAt(errorLineNumber - 1).bgcolor = 'transparent'
+                        lineNumberRepeater.itemAt(errorLineNumber - 1).bgcolor = 'transparent'
                 }
             }
         }
@@ -166,9 +170,7 @@ Window {
             Transition {
                 to: "*"
                 NumberAnimation { target: view; properties: "width"; duration: 300; easing.type: Easing.InOutQuad; }
-                NumberAnimation { target: view; properties: "opacity"; duration: 300; easing.type: Easing.InOutQuad; }
                 NumberAnimation { target: background; properties: "width"; duration: 300; easing.type: Easing.InOutQuad; }
-                NumberAnimation { target: background; properties: "opacity"; duration: 300; easing.type: Easing.InOutQuad; }
             }
         ]
     }
@@ -177,15 +179,15 @@ Window {
         id: background
         width: root.width/2
         height: root.height
-        anchors { top: parent.top; left: parent.left; bottom: parent.bottom }
+        anchors { top: parent.top; left: parent.left; bottom: navibar.top}
         color: '#1d1f21'
         visible: opacity > 0 ? true : false
 
         Flickable {
-            anchors { fill: parent; bottomMargin: bottomBar.height }
+            anchors { fill: parent; }
             flickableDirection: Flickable.VerticalFlick
             contentWidth: parent.width
-            contentHeight: editor.height + bottomBar.height
+            contentHeight: editor.height
             clip: true
 
             Column {
@@ -235,6 +237,11 @@ Window {
                 renderType: Text.NativeRendering
                 onTextChanged: timer.restart();
 
+                onSelectedTextChanged: {
+                    if (editor.selectedText === "") {
+                        navibar.state = 'view'
+                    }
+                }
                 // FIXME: stupid workaround for indent
                 Keys.onPressed: {
                     if (event.key == Qt.Key_BraceRight) {
@@ -266,11 +273,12 @@ Window {
                 // style from Atom dark theme:
                 // https://github.com/atom/atom-dark-syntax/blob/master/stylesheets/syntax-variables.less
                 color: '#c5c8c6'
-                selectionColor: '#444444'
+                selectionColor: '#0C75BC'
                 selectByMouse: true
                 font { pointSize: 18; family: platformSetting[os_type[platform]]['defaultFont'] }
 
                 text: documentHandler.text
+                inputMethodHints: Qt.ImhNoPredictiveText
 
                 DocumentHandler {
                     id: documentHandler
@@ -281,12 +289,38 @@ Window {
                             "\n        text: 'Hello, World!' \n    } \n}"
                     }
                 }
+
+                // FIXME: add selection / copy / paste popup
+                MouseArea {
+                    id: handler
+                    // FIXME: disable on desktop
+                    enabled: os_type[platform] != 'macx'
+                    anchors.fill: parent
+                    propagateComposedEvents: true
+                    onPressed: {
+                        editor.cursorPosition = parent.positionAt(mouse.x, mouse.y);
+                        editor.focus = true
+                        navibar.state = 'view'
+                        Qt.inputMethod.show();
+                    }
+                    onPressAndHold: {
+                        navibar.state = 'selection'
+                        Qt.inputMethod.hide();
+                    }
+                    onDoubleClicked: {
+                        editor.selectWord()
+                        navibar.state = 'selection'
+                    }
+                }
             } // end of editor
 
         }
     }
-    BottomBar {
-        id: bottomBar
+    Image {
+        fillMode: Image.TileHorizontally
+        source: "shadow.png"
+        width: navibar.width
+        anchors.bottom: navibar.top
+        height: 6
     }
-
 }

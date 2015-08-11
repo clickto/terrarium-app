@@ -30,3 +30,12 @@ Makefile*
 *.app
 *.dmg
 *deployment-settings.json
+
+# Project files
+Terrarium
+Terrarium.build
+Terrarium.xcodeproj
+.tmp
+terrarium_plugin_import.cpp
+terrarium_qml_plugin_import.cpp
+qt.conf

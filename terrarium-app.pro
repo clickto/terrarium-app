@@ -13,25 +13,29 @@ SOURCES += src/main.cpp \
     qhttpserver/src/qhttprequest.cpp \
     qhttpserver/src/qhttpresponse.cpp \
     qhttpserver/src/qhttpserver.cpp \
-    qhttpserver/http-parser/http_parser.c
+    qhttpserver/http-parser/http_parser.c \
+    src/quickitemgrabber.cpp
 
 HEADERS += qhttpserver/src/qhttpserver.h \
-    qhttpserver/src/qhttpresponse.h \
-    qhttpserver/src/qhttprequest.h \
+    qhttpserver/src//qhttpresponse.h \
+    qhttpserver/src//qhttprequest.h \
     src/qmlhighlighter.h \
     src/documenthandler.h \
-    qhttpserver/src/qhttpconnection.h
+    qhttpserver/src//qhttpconnection.h \ 
+    src/quickitemgrabber.h
 
 INCLUDEPATH += ./qhttpserver/http-parser/
 RESOURCES += qml/assets.qrc
 
-OTHER_FILES += qml/*.qml
+android {
+    ANDROID_PACKAGE_SOURCE_DIR = ./platform/android
+}
 
-mac {
+macx {
+    QMAKE_MAC_SDK = macosx10.10
     QMAKE_INFO_PLIST = platform/mac/Info.plist
     ICON = platform/mac/icon.icns
     #QMAKE_POST_LINK += macdeployqt Terrarium.app/ -qmldir=qml/ -verbose=1 -dmg
-    QMAKE_MAC_SDK = macosx10.9
 }
 
 ios {
