@@ -4,15 +4,15 @@
 void QMLHighlighter::highlightBlock(const QString &text)
 {
     QTextCharFormat keywordFormat;
-    keywordFormat.setForeground(QColor("#d7ffaf")); // Identifier
+    keywordFormat.setForeground(QColor("##f8f8f2")); // Identifier
     QTextCharFormat typeFormat;
-    typeFormat.setForeground(QColor("#afffff")); // Type
+    typeFormat.setForeground(QColor("#66d9ef")); // Type
     QTextCharFormat commentFormat;
-    commentFormat.setForeground(QColor("#8a8a8a")); // Comment 
+    commentFormat.setForeground(QColor("##75715e")); // Comment
     QTextCharFormat numericConstantFormat;
-    numericConstantFormat.setForeground(QColor("#ffffd7")); // Constant 
+    numericConstantFormat.setForeground(QColor("#ae81ff")); // Constant
     QTextCharFormat stringConstantFormat;
-    stringConstantFormat.setForeground(QColor("#ffffd7")); 
+    stringConstantFormat.setForeground(QColor("#e6db74"));
 
     QRegExp type("\\b[A-Z][A-Za-z]+\\b");
     QRegExp numericConstant("[0-9]+\\.?[0-9]*");
